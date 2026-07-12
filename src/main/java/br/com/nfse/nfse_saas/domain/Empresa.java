@@ -36,7 +36,8 @@ public class Empresa {
 
     @ManyToOne
     @JoinColumn(name = "usuario_id")
-    @JsonIgnoreProperties("empresas")
+    @JsonIgnorgit status
+    eProperties("empresas")
     private Usuario usuario;
 
     @OneToOne(cascade = CascadeType.ALL)
