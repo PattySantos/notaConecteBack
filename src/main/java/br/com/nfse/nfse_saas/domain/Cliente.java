@@ -1,5 +1,6 @@
 package br.com.nfse.nfse_saas.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -15,10 +16,19 @@ public class Cliente {
 
     private String documento; // CPF ou CNPJ
 
+    private String tipoPessoa;
+
+    private String nomeFantasia;
+
+    private String inscricaoMunicipal;
+
+    private String telefone;
+
     private String email;
 
     @ManyToOne
     @JoinColumn(name = "empresa_id")
+    @JsonIgnore
     private Empresa empresa;
 
     @OneToOne(cascade = CascadeType.ALL)

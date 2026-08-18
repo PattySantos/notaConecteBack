@@ -74,7 +74,12 @@ public class NfseXmlBuilder {
         } else {
             xml.append("<Cnpj>").append(documentoTomador).append("</Cnpj>");
         }
-        xml.append("</CpfCnpj></IdentificacaoTomador>");
+        xml.append("</CpfCnpj>");
+        String inscricaoMunicipalTomador = somenteNumeros(dto.getTomador().getInscricaoMunicipalTomador());
+        if (!inscricaoMunicipalTomador.isEmpty()) {
+            xml.append("<InscricaoMunicipal>").append(inscricaoMunicipalTomador).append("</InscricaoMunicipal>");
+        }
+        xml.append("</IdentificacaoTomador>");
         xml.append("<RazaoSocial>").append(escaparXml(dto.getTomador().getRazaoSocialTomador())).append("</RazaoSocial>");
         xml.append("<Endereco><Endereco>").append(escaparXml(dto.getTomador().getEnderecoTomador())).append("</Endereco>");
         xml.append("<Numero>").append(escaparXml(dto.getTomador().getNumero())).append("</Numero>");

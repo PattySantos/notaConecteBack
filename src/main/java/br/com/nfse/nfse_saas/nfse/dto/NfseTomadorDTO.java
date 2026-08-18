@@ -5,6 +5,7 @@ import lombok.Data;
 @Data
 public class NfseTomadorDTO {
     private String cpfCnpjTomador;
+    private String inscricaoMunicipalTomador;
     private String razaoSocialTomador;
     private String enderecoTomador;
     private String numero;

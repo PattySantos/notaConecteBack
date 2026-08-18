@@ -6,6 +6,7 @@ import br.com.nfse.nfse_saas.domain.Empresa;
 import br.com.nfse.nfse_saas.repository.EmpresaRepository;
 import br.com.nfse.nfse_saas.repository.UsuarioRepository;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
@@ -19,15 +20,25 @@ public class UsuarioController {
 
     private final UsuarioRepository repository;
     private final EmpresaRepository empresaRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public UsuarioController(UsuarioRepository repository, EmpresaRepository empresaRepository) {
+    public UsuarioController(UsuarioRepository repository, EmpresaRepository empresaRepository,
+                             PasswordEncoder passwordEncoder) {
         this.repository = repository;
         this.empresaRepository = empresaRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @PostMapping
     @Transactional
     public Usuario salvar(@RequestBody Usuario usuario) {
+        if (usuario.getSenha() == null || usuario.getSenha().isBlank()) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST, "Senha obrigatoria");
+        }
+        if (!usuario.getSenha().startsWith("$2")) {
+            usuario.setSenha(passwordEncoder.encode(usuario.getSenha()));
+        }
         List<Empresa> empresasRecebidas = usuario.getEmpresas() == null
                 ? Collections.emptyList()
                 : usuario.getEmpresas();

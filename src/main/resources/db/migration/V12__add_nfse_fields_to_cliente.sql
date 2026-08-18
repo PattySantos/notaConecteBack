@@ -1,0 +1,5 @@
+ALTER TABLE cliente
+    ADD COLUMN IF NOT EXISTS tipo_pessoa VARCHAR(20),
+    ADD COLUMN IF NOT EXISTS nome_fantasia VARCHAR(150),
+    ADD COLUMN IF NOT EXISTS inscricao_municipal VARCHAR(30),
+    ADD COLUMN IF NOT EXISTS telefone VARCHAR(30);

@@ -103,7 +103,9 @@ public class NfseEmissaoService {
         dto.getPrestador().setCodigoTributacaoMunicipio(primeiroTexto(nota.getCodigoServico(), nota.getCodigoServicoNacional()));
 
         dto.getTomador().setCpfCnpjTomador(cliente.getDocumento());
+        dto.getTomador().setInscricaoMunicipalTomador(cliente.getInscricaoMunicipal());
         dto.getTomador().setRazaoSocialTomador(cliente.getNome());
+        dto.getTomador().setTelefoneTomador(cliente.getTelefone());
         dto.getTomador().setEmailTomador(cliente.getEmail());
 
         if (enderecoTomador != null) {
