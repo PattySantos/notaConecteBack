@@ -1,4 +1,6 @@
 spring:
+  application:
+    name: nota-conecte-api
   datasource:
     url: jdbc:postgresql://localhost:5432/nfse_saas
     username: postgres

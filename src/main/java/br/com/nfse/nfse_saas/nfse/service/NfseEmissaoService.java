@@ -87,19 +87,37 @@ public class NfseEmissaoService {
         NotaFiscalServicoDTO dto = new NotaFiscalServicoDTO();
         Endereco enderecoTomador = cliente.getEndereco();
 
-        dto.getNotaFiscal().setNumeroRps(String.valueOf(nota.getNumeroNfse() != null ? nota.getNumeroNfse() : nota.getId()));
-        dto.getNotaFiscal().setSerieRps("1");
-        dto.getNotaFiscal().setTipoRps("1");
+        dto.getNotaFiscal().setNumeroRps(primeiroTexto(nota.getNumeroRps(), String.valueOf(nota.getNumeroNfse() != null ? nota.getNumeroNfse() : nota.getId())));
+        dto.getNotaFiscal().setSerieRps(primeiroTexto(nota.getSerieRps(), "1"));
+        dto.getNotaFiscal().setTipoRps(String.valueOf(nota.getTipoRps() != null ? nota.getTipoRps() : 1));
+        dto.getNotaFiscal().setDataCompetencia(nota.getDataCompetencia());
         dto.getNotaFiscal().setValorServicos(nota.getValor() != null ? nota.getValor() : BigDecimal.ZERO);
         dto.getNotaFiscal().setAliquotaIss(nota.getIss() != null ? nota.getIss() : BigDecimal.ZERO);
-        dto.getNotaFiscal().setIssRetido("2");
+        dto.getNotaFiscal().setIssRetido(Boolean.TRUE.equals(nota.getIssRetido()) ? "1" : "2");
         dto.getNotaFiscal().setCodigoItemListaServico(primeiroTexto(nota.getCodigoServico(), nota.getCodigoServicoNacional()));
+        dto.getNotaFiscal().setCodigoTributacaoMunicipio(nota.getCodigoServico());
+        dto.getNotaFiscal().setCodigoCnae(nota.getCodigoCnae());
         dto.getNotaFiscal().setCodigoNbs(nota.getCodigoNbs());
         dto.getNotaFiscal().setDiscriminacaoServico(nota.getDescricao());
+        dto.getNotaFiscal().setCodigoMunicipio(primeiroTexto(nota.getMunicipio(), "5208707"));
+        dto.getNotaFiscal().setExigibilidadeIss(nota.getExigibilidadeIss() != null ? nota.getExigibilidadeIss() : 1);
+        dto.getNotaFiscal().setValorDeducoes(nota.getValorDeducoes());
+        dto.getNotaFiscal().setDescontoIncondicionado(nota.getDescontoIncondicionado());
+        dto.getNotaFiscal().setDescontoCondicionado(nota.getDescontoCondicionado());
+        dto.getNotaFiscal().setValorPis(nota.getValorPis());
+        dto.getNotaFiscal().setValorCofins(nota.getValorCofins());
+        dto.getNotaFiscal().setValorInss(nota.getValorInss());
+        dto.getNotaFiscal().setValorIr(nota.getValorIr());
+        dto.getNotaFiscal().setValorCsll(nota.getValorCsll());
+        dto.getNotaFiscal().setOutrasRetencoes(nota.getOutrasRetencoes());
+        dto.getNotaFiscal().setProcessoSuspensao(nota.getProcessoSuspensao());
+        dto.getNotaFiscal().setCno(nota.getCno());
+        dto.getNotaFiscal().setArt(nota.getArt());
+        dto.getNotaFiscal().setInformacoesComplementares(nota.getInformacoesComplementares());
 
         dto.getPrestador().setCpfCnpjPrestador(empresa.getCnpj());
-        dto.getPrestador().setInscricaoMunicipalPrestador("");
-        dto.getPrestador().setCodigoCnae("");
+        dto.getPrestador().setInscricaoMunicipalPrestador(empresa.getInscricaoMunicipal());
+        dto.getPrestador().setCodigoCnae(primeiroTexto(nota.getCodigoCnae(), empresa.getCnaePrincipal()));
         dto.getPrestador().setCodigoTributacaoMunicipio(primeiroTexto(nota.getCodigoServico(), nota.getCodigoServicoNacional()));
 
         dto.getTomador().setCpfCnpjTomador(cliente.getDocumento());

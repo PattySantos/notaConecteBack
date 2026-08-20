@@ -15,13 +15,15 @@ public class NfseXmlBuilder {
 
     public String gerarXml(NotaFiscalServicoDTO dto) {
         String data = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        String competencia = dto.getNotaFiscal().getDataCompetencia() != null ? dto.getNotaFiscal().getDataCompetencia().toString() : data;
         DecimalFormatSymbols symbols = DecimalFormatSymbols.getInstance(Locale.US);
         DecimalFormat df2 = new DecimalFormat("0.00", symbols);
         DecimalFormat dfAliquota = new DecimalFormat("0.##", symbols);
 
         BigDecimal valorServicos = valor(dto.getNotaFiscal().getValorServicos());
         BigDecimal aliquota = valor(dto.getNotaFiscal().getAliquotaIss());
-        BigDecimal valorIss = valorServicos.multiply(aliquota).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+        BigDecimal baseCalculo = valorServicos.subtract(valor(dto.getNotaFiscal().getValorDeducoes())).subtract(valor(dto.getNotaFiscal().getDescontoIncondicionado())).max(BigDecimal.ZERO);
+        BigDecimal valorIss = baseCalculo.multiply(aliquota).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
 
         String cnpjPrestador = somenteNumeros(dto.getPrestador().getCpfCnpjPrestador());
         String inscricaoMunicipal = somenteNumeros(dto.getPrestador().getInscricaoMunicipalPrestador());
@@ -43,28 +45,39 @@ public class NfseXmlBuilder {
         xml.append("<Serie>").append(escaparXml(serieRps)).append("</Serie>");
         xml.append("<Tipo>").append(tipoRps).append("</Tipo>");
         xml.append("</IdentificacaoRps><DataEmissao>").append(data).append("</DataEmissao><Status>1</Status></Rps>");
-        xml.append("<Competencia>").append(data).append("</Competencia>");
+        xml.append("<Competencia>").append(competencia).append("</Competencia>");
         xml.append("<Servico><Valores>");
         xml.append("<ValorServicos>").append(df2.format(valorServicos)).append("</ValorServicos>");
-        xml.append("<ValorDeducoes>0.00</ValorDeducoes><ValorPis>0.00</ValorPis><ValorCofins>0.00</ValorCofins>");
-        xml.append("<ValorInss>0.00</ValorInss><ValorIr>0.00</ValorIr><ValorCsll>0.00</ValorCsll>");
-        xml.append("<OutrasRetencoes>0.00</OutrasRetencoes><ValTotTributos>0.00</ValTotTributos>");
+        xml.append("<ValorDeducoes>").append(df2.format(valor(dto.getNotaFiscal().getValorDeducoes()))).append("</ValorDeducoes>");
+        xml.append("<ValorPis>").append(df2.format(valor(dto.getNotaFiscal().getValorPis()))).append("</ValorPis>");
+        xml.append("<ValorCofins>").append(df2.format(valor(dto.getNotaFiscal().getValorCofins()))).append("</ValorCofins>");
+        xml.append("<ValorInss>").append(df2.format(valor(dto.getNotaFiscal().getValorInss()))).append("</ValorInss>");
+        xml.append("<ValorIr>").append(df2.format(valor(dto.getNotaFiscal().getValorIr()))).append("</ValorIr>");
+        xml.append("<ValorCsll>").append(df2.format(valor(dto.getNotaFiscal().getValorCsll()))).append("</ValorCsll>");
+        xml.append("<OutrasRetencoes>").append(df2.format(valor(dto.getNotaFiscal().getOutrasRetencoes()))).append("</OutrasRetencoes><ValTotTributos>0.00</ValTotTributos>");
         xml.append("<ValorIss>").append(df2.format(valorIss)).append("</ValorIss>");
         xml.append("<Aliquota>").append(dfAliquota.format(aliquota)).append("</Aliquota>");
-        xml.append("<DescontoIncondicionado>0.00</DescontoIncondicionado><DescontoCondicionado>0.00</DescontoCondicionado>");
+        xml.append("<DescontoIncondicionado>").append(df2.format(valor(dto.getNotaFiscal().getDescontoIncondicionado()))).append("</DescontoIncondicionado>");
+        xml.append("<DescontoCondicionado>").append(df2.format(valor(dto.getNotaFiscal().getDescontoCondicionado()))).append("</DescontoCondicionado>");
         xml.append("</Valores>");
         xml.append("<IssRetido>").append(issRetido).append("</IssRetido>");
         if ("1".equals(issRetido)) {
             xml.append("<ResponsavelRetencao>1</ResponsavelRetencao>");
         }
         xml.append("<ItemListaServico>").append(escaparXml(dto.getNotaFiscal().getCodigoItemListaServico())).append("</ItemListaServico>");
-        xml.append("<CodigoCnae>").append(somenteNumeros(dto.getPrestador().getCodigoCnae())).append("</CodigoCnae>");
-        xml.append("<CodigoTributacaoMunicipio>").append(somenteNumeros(dto.getPrestador().getCodigoTributacaoMunicipio())).append("</CodigoTributacaoMunicipio>");
+        xml.append("<CodigoCnae>").append(somenteNumeros(dto.getNotaFiscal().getCodigoCnae())).append("</CodigoCnae>");
+        xml.append("<CodigoTributacaoMunicipio>").append(somenteNumeros(dto.getNotaFiscal().getCodigoTributacaoMunicipio())).append("</CodigoTributacaoMunicipio>");
         if (!texto(dto.getNotaFiscal().getCodigoNbs(), "").isEmpty()) {
             xml.append("<CodigoNbs>").append(escaparXml(dto.getNotaFiscal().getCodigoNbs())).append("</CodigoNbs>");
         }
         xml.append("<Discriminacao>").append(escaparXml(removerAcentos(dto.getNotaFiscal().getDiscriminacaoServico()))).append("</Discriminacao>");
-        xml.append("<CodigoMunicipio>5208707</CodigoMunicipio><ExigibilidadeISS>1</ExigibilidadeISS><MunicipioIncidencia>5208707</MunicipioIncidencia>");
+        String codigoMunicipio = somenteNumeros(texto(dto.getNotaFiscal().getCodigoMunicipio(), "5208707"));
+        int exigibilidadeIss = dto.getNotaFiscal().getExigibilidadeIss() != null ? dto.getNotaFiscal().getExigibilidadeIss() : 1;
+        xml.append("<CodigoMunicipio>").append(codigoMunicipio).append("</CodigoMunicipio><ExigibilidadeISS>").append(exigibilidadeIss).append("</ExigibilidadeISS>");
+        if ((exigibilidadeIss == 6 || exigibilidadeIss == 7) && !texto(dto.getNotaFiscal().getProcessoSuspensao(), "").isEmpty()) {
+            xml.append("<ProcessoSuspensao>").append(escaparXml(dto.getNotaFiscal().getProcessoSuspensao())).append("</ProcessoSuspensao>");
+        }
+        xml.append("<MunicipioIncidencia>").append(codigoMunicipio).append("</MunicipioIncidencia>");
         xml.append("</Servico>");
         xml.append("<Prestador><CpfCnpj><Cnpj>").append(cnpjPrestador).append("</Cnpj></CpfCnpj>");
         xml.append("<InscricaoMunicipal>").append(inscricaoMunicipal).append("</InscricaoMunicipal></Prestador>");
@@ -96,6 +109,9 @@ public class NfseXmlBuilder {
             xml.append("</Contato>");
         }
         xml.append("</TomadorServico>");
+        if (!texto(dto.getNotaFiscal().getCno(), "").isEmpty() || !texto(dto.getNotaFiscal().getArt(), "").isEmpty()) {
+            xml.append("<ConstrucaoCivil><CodigoObra>").append(escaparXml(dto.getNotaFiscal().getCno())).append("</CodigoObra><Art>").append(escaparXml(dto.getNotaFiscal().getArt())).append("</Art></ConstrucaoCivil>");
+        }
         xml.append("<RegimeEspecialTributacao>6</RegimeEspecialTributacao><OptanteSimplesNacional>1</OptanteSimplesNacional><IncentivoFiscal>1</IncentivoFiscal>");
         xml.append("</InfDeclaracaoPrestacaoServico></Rps></GerarNfseEnvio>");
         return xml.toString().replace("\r", "").replace("\n", "").replace("\t", "").replace("&#13;", "");

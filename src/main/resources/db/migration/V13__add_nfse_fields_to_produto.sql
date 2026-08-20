@@ -1,0 +1,15 @@
+ALTER TABLE produto
+    ADD COLUMN IF NOT EXISTS descricao TEXT,
+    ADD COLUMN IF NOT EXISTS codigo_servico_nacional VARCHAR(20),
+    ADD COLUMN IF NOT EXISTS codigo_servico_municipal VARCHAR(20),
+    ADD COLUMN IF NOT EXISTS codigo_cnae VARCHAR(10),
+    ADD COLUMN IF NOT EXISTS codigo_nbs VARCHAR(20),
+    ADD COLUMN IF NOT EXISTS aliquota_iss NUMERIC(10, 4),
+    ADD COLUMN IF NOT EXISTS iss_retido BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS exigibilidade_iss INTEGER NOT NULL DEFAULT 1,
+    ADD COLUMN IF NOT EXISTS municipio_incidencia_ibge VARCHAR(7) DEFAULT '5208707',
+    ADD COLUMN IF NOT EXISTS indicador_ibscbs VARCHAR(50),
+    ADD COLUMN IF NOT EXISTS ativo BOOLEAN NOT NULL DEFAULT TRUE;
+
+CREATE INDEX IF NOT EXISTS idx_produto_empresa_ativo
+    ON produto (empresa_id, ativo);

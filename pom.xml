@@ -11,7 +11,7 @@
   <groupId>br.com.nfse</groupId>
   <artifactId>nfse-saas</artifactId>
   <version>0.0.1-SNAPSHOT</version>
-  <name>nfse-saas</name>
+  <name>Nota Conecte API</name>
   <description>Software para emissao nfse goiania</description>
   <url />
   <licenses>
