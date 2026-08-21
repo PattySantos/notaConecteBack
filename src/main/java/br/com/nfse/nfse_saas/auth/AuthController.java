@@ -15,11 +15,24 @@ public class AuthController {
     private final UsuarioRepository repository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final PasswordResetService passwordResetService;
 
-    public AuthController(UsuarioRepository repository, PasswordEncoder passwordEncoder, JwtService jwtService) {
+    public AuthController(UsuarioRepository repository, PasswordEncoder passwordEncoder, JwtService jwtService,
+                          PasswordResetService passwordResetService) {
         this.repository = repository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.passwordResetService = passwordResetService;
+    }
+
+    @PostMapping("/esqueci-senha")
+    public void esqueciSenha(@Valid @RequestBody EsqueciSenhaRequest request) {
+        passwordResetService.solicitar(request.email());
+    }
+
+    @PostMapping("/redefinir-senha")
+    public void redefinirSenha(@Valid @RequestBody RedefinirSenhaRequest request) {
+        passwordResetService.redefinir(request.token(), request.senha());
     }
 
     @PostMapping("/login")

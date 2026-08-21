@@ -14,7 +14,23 @@ spring:
         format_sql: true
   flyway:
     enabled: true
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:false}
+          starttls:
+            enable: ${MAIL_STARTTLS:false}
 auth:
   jwt:
     secret: ${JWT_SECRET:nota-conecte-chave-local-segura-2026-troque-em-producao}
     expiration-minutes: ${JWT_EXPIRATION_MINUTES:480}
+  password-reset:
+    expiration-minutes: ${PASSWORD_RESET_EXPIRATION_MINUTES:30}
+    frontend-url: ${FRONTEND_URL:http://localhost:4200}
+    mail-enabled: ${PASSWORD_RESET_MAIL_ENABLED:false}
+    mail-from: ${MAIL_FROM:nao-responda@notaconecte.com.br}
