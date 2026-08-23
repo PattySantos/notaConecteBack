@@ -34,4 +34,7 @@ public class NfseNotaDTO {
     private String cno;
     private String art;
     private String informacoesComplementares;
+    private Integer regimeEspecialTributacao;
+    private String optanteSimplesNacional = "2";
+    private String incentivoFiscal = "2";
 }

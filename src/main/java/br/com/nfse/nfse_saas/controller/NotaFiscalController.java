@@ -8,6 +8,9 @@ import br.com.nfse.nfse_saas.repository.EmpresaRepository;
 import br.com.nfse.nfse_saas.repository.NotaFiscalRepository;
 import br.com.nfse.nfse_saas.tenant.TenantContext;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 import java.util.List;
 
@@ -30,9 +33,15 @@ public class NotaFiscalController {
     }
 
     @PostMapping
+    @Transactional
     public NotaFiscal salvar(@RequestBody NotaFiscal nota) {
-        nota.setEmpresa(empresaRepository.getReferenceById(TenantContext.getTenantId()));
-        preencherNumeroNfse(nota);
+        Empresa empresa = empresaRepository.findByIdForUpdate(TenantContext.getTenantId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Empresa nao encontrada"));
+        nota.setEmpresa(empresa);
+        preencherNumeroRps(nota, empresa);
+        nota.setNumeroNfse(null);
+        nota.setCodigoVerificacao(null);
+        nota.setStatus("RASCUNHO");
         return repository.save(nota);
     }
 
@@ -48,25 +57,13 @@ public class NotaFiscalController {
         return repository.findByEmpresaId(TenantContext.getTenantId());
     }
 
-    private void preencherNumeroNfse(NotaFiscal nota) {
-        if (nota.getId() != null || nota.getNumeroNfse() != null || nota.getEmpresa() == null || nota.getEmpresa().getId() == null) {
-            return;
-        }
-
-        Empresa empresa = empresaRepository.findById(nota.getEmpresa().getId()).orElse(null);
-
-        if (empresa == null) {
-            return;
-        }
-
-        Long proximoNumero = empresa.getProximoNumeroNfse();
-
-        if (proximoNumero == null || proximoNumero < 1) {
-            proximoNumero = 1L;
-        }
-
-        nota.setNumeroNfse(proximoNumero);
-        empresa.setProximoNumeroNfse(proximoNumero + 1);
+    private void preencherNumeroRps(NotaFiscal nota, Empresa empresa) {
+        long proximoNumero = empresa.getProximoNumeroRps() == null || empresa.getProximoNumeroRps() < 1
+                ? 1L
+                : empresa.getProximoNumeroRps();
+        nota.setNumeroRps(String.valueOf(proximoNumero));
+        nota.setSerieRps("1");
+        empresa.setProximoNumeroRps(proximoNumero + 1);
         empresaRepository.save(empresa);
     }
 }

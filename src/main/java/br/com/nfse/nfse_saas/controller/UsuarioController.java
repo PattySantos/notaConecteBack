@@ -36,9 +36,7 @@ public class UsuarioController {
             throw new org.springframework.web.server.ResponseStatusException(
                     org.springframework.http.HttpStatus.BAD_REQUEST, "Senha obrigatoria");
         }
-        if (!usuario.getSenha().startsWith("$2")) {
-            usuario.setSenha(passwordEncoder.encode(usuario.getSenha()));
-        }
+        usuario.setSenha(passwordEncoder.encode(usuario.getSenha()));
         List<Empresa> empresasRecebidas = usuario.getEmpresas() == null
                 ? Collections.emptyList()
                 : usuario.getEmpresas();

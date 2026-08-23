@@ -1,10 +1,12 @@
 package br.com.nfse.nfse_saas.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import br.com.nfse.nfse_saas.security.EncryptedStringConverter;
 
 @Data
 @Entity
@@ -54,11 +56,23 @@ public class Empresa {
     private String certificadoDigitalNome;
 
     @Column(columnDefinition = "TEXT")
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @Convert(converter = EncryptedStringConverter.class)
     private String certificadoDigitalBase64;
 
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @Convert(converter = EncryptedStringConverter.class)
     private String senhaCertificadoDigital;
 
     private Long proximoNumeroNfse;
+
+    private Long proximoNumeroRps;
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    public boolean isCertificadoDigitalConfigurado() {
+        return certificadoDigitalBase64 != null && !certificadoDigitalBase64.isBlank()
+                && senhaCertificadoDigital != null && !senhaCertificadoDigital.isBlank();
+    }
 
     @ManyToOne
     @JoinColumn(name = "usuario_id")

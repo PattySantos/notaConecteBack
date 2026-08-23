@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.util.Base64;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
 
@@ -24,22 +25,33 @@ public class NfseEmissaoService {
     private final NotaFiscalRepository notaRepository;
     private final ClienteRepository clienteRepository;
     private final NfseService nfseService;
+    private final NfseResponseParser responseParser;
 
     public NfseEmissaoService(
             NotaFiscalRepository notaRepository,
             ClienteRepository clienteRepository,
-            NfseService nfseService
+            NfseService nfseService,
+            NfseResponseParser responseParser
     ) {
         this.notaRepository = notaRepository;
         this.clienteRepository = clienteRepository;
         this.nfseService = nfseService;
+        this.responseParser = responseParser;
     }
 
+    @Transactional(noRollbackFor = ResponseStatusException.class)
     public NfseEmissaoResponseDTO emitir(Long notaId) {
-        NotaFiscal nota = notaRepository.findById(notaId)
+        NotaFiscal nota = notaRepository.findByIdForUpdate(notaId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "NFS-e nao localizada."));
 
         Empresa empresa = nota.getEmpresa();
+
+        if ("EMITIDA".equals(nota.getStatus())) {
+            return new NfseEmissaoResponseDTO(nota.getId(), nota.getNumeroNfse(), nota.getStatus(), "NFS-e ja emitida.");
+        }
+        if ("EMITINDO".equals(nota.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "A NFS-e ja esta em processamento.");
+        }
 
         if (empresa == null || empresa.getId() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A NFS-e nao possui empresa vinculada.");
@@ -53,19 +65,32 @@ public class NfseEmissaoService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tomador da NFS-e nao localizado."));
 
         validarCertificado(empresa);
+        validarDadosFiscais(nota, empresa, cliente);
+        nota.setStatus("EMITINDO");
+        notaRepository.saveAndFlush(nota);
 
         Path certificadoTemporario = null;
 
         try {
             certificadoTemporario = criarCertificadoTemporario(empresa);
             NotaFiscalServicoDTO dto = montarDto(nota, empresa, cliente);
-            String retorno = nfseService.emitir(dto, certificadoTemporario.toString(), empresa.getSenhaCertificadoDigital());
+            String retorno = nfseService.emitir(dto, empresa.getAmbienteEmissao(), certificadoTemporario.toString(), empresa.getSenhaCertificadoDigital());
+            NfseMunicipalResponse resposta = responseParser.parse(retorno);
+
+            if (!resposta.autorizada()) {
+                nota.setStatus("REJEITADA");
+                nota.setRetornoEmissaoNfse(resposta.mensagem());
+                notaRepository.save(nota);
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, resposta.mensagem());
+            }
 
             nota.setStatus("EMITIDA");
-            nota.setRetornoEmissaoNfse(retorno);
+            nota.setNumeroNfse(resposta.numeroNfse());
+            nota.setCodigoVerificacao(resposta.codigoVerificacao());
+            nota.setRetornoEmissaoNfse(resposta.xmlNfse());
             notaRepository.save(nota);
 
-            return new NfseEmissaoResponseDTO(nota.getId(), nota.getNumeroNfse(), nota.getStatus(), retorno);
+            return new NfseEmissaoResponseDTO(nota.getId(), nota.getNumeroNfse(), nota.getStatus(), resposta.mensagem());
         } catch (ResponseStatusException e) {
             throw e;
         } catch (Exception e) {
@@ -114,6 +139,9 @@ public class NfseEmissaoService {
         dto.getNotaFiscal().setCno(nota.getCno());
         dto.getNotaFiscal().setArt(nota.getArt());
         dto.getNotaFiscal().setInformacoesComplementares(nota.getInformacoesComplementares());
+        dto.getNotaFiscal().setRegimeEspecialTributacao(regimeEspecial(empresa.getRegimeEspecialTributacao()));
+        dto.getNotaFiscal().setOptanteSimplesNacional(Boolean.TRUE.equals(empresa.getOptanteSimplesNacional()) ? "1" : "2");
+        dto.getNotaFiscal().setIncentivoFiscal(Boolean.TRUE.equals(empresa.getIncentivoFiscal()) ? "1" : "2");
 
         dto.getPrestador().setCpfCnpjPrestador(empresa.getCnpj());
         dto.getPrestador().setInscricaoMunicipalPrestador(empresa.getInscricaoMunicipal());
@@ -148,6 +176,24 @@ public class NfseEmissaoService {
         }
     }
 
+    private void validarDadosFiscais(NotaFiscal nota, Empresa empresa, Cliente cliente) {
+        if (vazio(empresa.getCnpj()) || vazio(empresa.getInscricaoMunicipal())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "CNPJ e inscricao municipal do prestador sao obrigatorios.");
+        }
+        if (vazio(nota.getNumeroRps()) || vazio(nota.getSerieRps())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Numero e serie do RPS sao obrigatorios.");
+        }
+        if (nota.getValor() == null || nota.getValor().signum() <= 0 || vazio(nota.getDescricao())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Servico e valor da NFS-e sao obrigatorios.");
+        }
+        if (vazio(nota.getCodigoServicoNacional()) || vazio(nota.getCodigoServico()) || vazio(nota.getCodigoCnae())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Item LC 116, codigo municipal e CNAE sao obrigatorios.");
+        }
+        if (vazio(cliente.getDocumento()) || vazio(cliente.getNome())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Documento e nome do tomador sao obrigatorios.");
+        }
+    }
+
     private Path criarCertificadoTemporario(Empresa empresa) throws Exception {
         String nome = empresa.getCertificadoDigitalNome();
         String sufixo = nome != null && nome.toLowerCase().endsWith(".p12") ? ".p12" : ".pfx";
@@ -162,5 +208,18 @@ public class NfseEmissaoService {
 
     private String primeiroTexto(String valor, String fallback) {
         return !vazio(valor) ? valor : fallback;
+    }
+
+    private Integer regimeEspecial(String regime) {
+        if (vazio(regime)) return null;
+        return switch (regime) {
+            case "MICROEMPRESA_MUNICIPAL" -> 1;
+            case "ESTIMATIVA" -> 2;
+            case "SOCIEDADE_PROFISSIONAIS" -> 3;
+            case "COOPERATIVA" -> 4;
+            case "MEI" -> 5;
+            case "ME_EPP_SIMPLES" -> 6;
+            default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Regime especial de tributacao invalido.");
+        };
     }
 }

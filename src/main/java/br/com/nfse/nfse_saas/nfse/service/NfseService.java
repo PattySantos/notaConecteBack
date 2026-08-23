@@ -13,10 +13,17 @@ public class NfseService {
 
     private static final String TAG_ASSINATURA_RPS = "InfDeclaracaoPrestacaoServico";
 
-    private final NfseXmlBuilder xmlBuilder = new NfseXmlBuilder();
-    private final NfseCabecalhoBuilder cabecalhoBuilder = new NfseCabecalhoBuilder();
-    private final NfseSoapClient soapClient = new NfseSoapClient();
-    private final XmlSigner xmlSigner = new XmlSigner();
+    private final NfseXmlBuilder xmlBuilder;
+    private final NfseCabecalhoBuilder cabecalhoBuilder;
+    private final NfseSoapClient soapClient;
+    private final XmlSigner xmlSigner;
+
+    public NfseService(NfseSoapClient soapClient) {
+        this.xmlBuilder = new NfseXmlBuilder();
+        this.cabecalhoBuilder = new NfseCabecalhoBuilder();
+        this.soapClient = soapClient;
+        this.xmlSigner = new XmlSigner();
+    }
 
     public String gerarXml(NotaFiscalServicoDTO dto) {
         return xmlBuilder.gerarXml(dto);
@@ -30,9 +37,9 @@ public class NfseService {
         return xmlSigner.assinar(xml, tagAssinatura, certificadoPath, senhaCertificado);
     }
 
-    public String emitir(NotaFiscalServicoDTO dto, String certificadoPath, String senhaCertificado) throws Exception {
+    public String emitir(NotaFiscalServicoDTO dto, String ambiente, String certificadoPath, String senhaCertificado) throws Exception {
         String xml = gerarXml(dto);
         String xmlAssinado = assinarXml(xml, certificadoPath, senhaCertificado);
-        return soapClient.enviar(cabecalhoBuilder.gerarCabecalho(), xmlAssinado);
+        return soapClient.enviar(ambiente, cabecalhoBuilder.gerarCabecalho(), xmlAssinado);
     }
 }

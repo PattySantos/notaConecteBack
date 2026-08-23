@@ -1,0 +1,2 @@
+ALTER TABLE empresa
+    ADD COLUMN IF NOT EXISTS proximo_numero_rps BIGINT NOT NULL DEFAULT 1;

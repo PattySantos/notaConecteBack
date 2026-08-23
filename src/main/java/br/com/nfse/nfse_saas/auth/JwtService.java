@@ -14,11 +14,18 @@ import java.util.Date;
 
 @Service
 public class JwtService {
+    private static final int MIN_SECRET_LENGTH = 32;
     private final SecretKey key;
     private final long expirationMinutes;
 
     public JwtService(@Value("${auth.jwt.secret}") String secret,
                       @Value("${auth.jwt.expiration-minutes}") long expirationMinutes) {
+        if (secret == null || secret.length() < MIN_SECRET_LENGTH) {
+            throw new IllegalStateException("JWT_SECRET deve possuir pelo menos 32 caracteres");
+        }
+        if (expirationMinutes < 5 || expirationMinutes > 1440) {
+            throw new IllegalStateException("JWT_EXPIRATION_MINUTES deve estar entre 5 e 1440");
+        }
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expirationMinutes = expirationMinutes;
     }

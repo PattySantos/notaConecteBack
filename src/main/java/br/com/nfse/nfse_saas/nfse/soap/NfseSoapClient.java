@@ -1,231 +1,87 @@
 package br.com.nfse.nfse_saas.nfse.soap;
 
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.time.Duration;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+@Component
 public class NfseSoapClient {
 
-    private static final String ENDPOINT =
-            "https://nfse.issnetonline.com.br/abrasf204/goiania/nfse.asmx";
+    private static final String SOAP_ACTION = "http://nfse.abrasf.org.br/GerarNfse";
 
-    public String enviar(
-            String cabecalho,
-            String xmlAssinado
+    private final HttpClient httpClient;
+    private final String endpointProducao;
+    private final String endpointHomologacao;
+
+    public NfseSoapClient(
+            @Value("${nfse.goiania.endpoint-producao}") String endpointProducao,
+            @Value("${nfse.goiania.endpoint-homologacao:}") String endpointHomologacao,
+            @Value("${nfse.http.connect-timeout-seconds:10}") long connectTimeoutSeconds
     ) {
-
-        try {
-
-            /*
-             * REMOVE XML DECLARATION
-             */
-
-            cabecalho =
-                    removerDeclaracaoXml(cabecalho);
-
-            xmlAssinado =
-                    removerDeclaracaoXml(xmlAssinado);
-
-            /*
-             * SOAP XML
-             */
-
-            String soapXml =
-                    montarSoap(
-                            cabecalho,
-                            xmlAssinado
-                    );
-
-            /*
-             * LOG
-             */
-            System.out.println(">>> SOAP GERADO PELO MONTARSOAP SEM CDATA NO CABECALHO");
-
-            if (soapXml.contains("<nfseCabecMsg><![CDATA[")) {
-                throw new RuntimeException(
-                        "ERRO: nfseCabecMsg ainda estÃ¡ saindo com CDATA. O mÃ©todo montarSoap usado na execuÃ§Ã£o nÃ£o Ã© o novo."
-                );
-            }
-            salvarDebugXml(
-                    "03-soap-final-enviado.xml",
-                    soapXml
-            );
-
-            System.out.println("=================================");
-            System.out.println("SOAP ENVIADO");
-            System.out.println("=================================");
-
-            System.out.println(soapXml);
-
-            /*
-             * CONEXAO
-             */
-
-            URL url =
-                    new URL(ENDPOINT);
-
-            HttpURLConnection connection =
-                    (HttpURLConnection) url.openConnection();
-
-            connection.setRequestMethod("POST");
-
-            connection.setDoOutput(true);
-
-            connection.setRequestProperty(
-                    "Content-Type",
-                    "text/xml; charset=utf-8"
-            );
-
-            connection.setRequestProperty(
-                    "SOAPAction",
-                    "\"http://nfse.abrasf.org.br/GerarNfse\""
-            );
-            /*
-             * ENVIA SOAP
-             */
-
-            try (OutputStream os =
-                         connection.getOutputStream()) {
-
-                os.write(
-                        soapXml.getBytes(StandardCharsets.UTF_8)
-                );
-            }
-
-            /*
-             * STATUS
-             */
-
-            int status =
-                    connection.getResponseCode();
-
-            System.out.println("HTTP STATUS: " + status);
-
-            /*
-             * RESPOSTA
-             */
-
-            InputStream is;
-
-            if (status >= 400) {
-
-                is =
-                        connection.getErrorStream();
-
-            } else {
-
-                is =
-                        connection.getInputStream();
-            }
-
-            BufferedReader br =
-                    new BufferedReader(
-                            new InputStreamReader(
-                                    is,
-                                    StandardCharsets.UTF_8
-                            )
-                    );
-
-            StringBuilder response =
-                    new StringBuilder();
-
-            String line;
-
-            while ((line = br.readLine()) != null) {
-
-                response.append(line);
-            }
-            salvarDebugXml(
-                    "04-retorno-prefeitura.xml",
-                    response.toString()
-            );
-            /*
-             * LOG RESPONSE
-             */
-
-            System.out.println("=================================");
-            System.out.println("SOAP RESPONSE");
-            System.out.println("=================================");
-
-            System.out.println(response);
-
-            return response.toString();
-
-        } catch (Exception e) {
-
-            e.printStackTrace();
-
-            return e.toString();
-        }
+        this.endpointProducao = endpointProducao;
+        this.endpointHomologacao = endpointHomologacao;
+        this.httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(connectTimeoutSeconds))
+                .build();
     }
 
-    /*
-     * SOAP
-     */
+    public String enviar(String ambiente, String cabecalho, String xmlAssinado) throws IOException, InterruptedException {
+        String endpoint = selecionarEndpoint(ambiente);
+        String soapXml = montarSoap(removerDeclaracaoXml(cabecalho), removerDeclaracaoXml(xmlAssinado));
+
+        HttpRequest request = HttpRequest.newBuilder(URI.create(endpoint))
+                .timeout(Duration.ofSeconds(30))
+                .header("Content-Type", "text/xml; charset=utf-8")
+                .header("SOAPAction", '"' + SOAP_ACTION + '"')
+                .POST(HttpRequest.BodyPublishers.ofString(soapXml, StandardCharsets.UTF_8))
+                .build();
+
+        HttpResponse<String> response = httpClient.send(
+                request,
+                HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
+        );
+
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            throw new IOException("SGISS respondeu HTTP " + response.statusCode());
+        }
+        if (response.body() == null || response.body().isBlank()) {
+            throw new IOException("SGISS retornou uma resposta vazia");
+        }
+        return response.body();
+    }
+
+    private String selecionarEndpoint(String ambiente) {
+        if ("PRODUCAO".equalsIgnoreCase(ambiente)) {
+            return endpointProducao;
+        }
+        if (endpointHomologacao == null || endpointHomologacao.isBlank()) {
+            throw new IllegalStateException(
+                    "Ambiente de homologacao nao configurado. Defina NFSE_GOIANIA_ENDPOINT_HOMOLOGACAO ou selecione PRODUCAO."
+            );
+        }
+        return endpointHomologacao;
+    }
+
     private String montarSoap(String cabecalho, String xml) {
         return "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-                + "<soap:Envelope "
-                + "xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" "
+                + "<soap:Envelope xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" "
                 + "xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" "
                 + "xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">"
-                + "<soap:Body>"
-                + "<GerarNfse xmlns=\"http://nfse.abrasf.org.br\">"
-
-                + "<nfseCabecMsg>"
-                + cabecalho
-                + "</nfseCabecMsg>"
-
-                // TESTE AGORA SEM CDATA NO DADOS TAMBÃ‰M
-                + "<nfseDadosMsg>"
-                + xml
-                + "</nfseDadosMsg>"
-
-                + "</GerarNfse>"
-                + "</soap:Body>"
-                + "</soap:Envelope>";
+                + "<soap:Body><GerarNfse xmlns=\"http://nfse.abrasf.org.br\">"
+                + "<nfseCabecMsg>" + cabecalho + "</nfseCabecMsg>"
+                + "<nfseDadosMsg>" + xml + "</nfseDadosMsg>"
+                + "</GerarNfse></soap:Body></soap:Envelope>";
     }
-    /*
-     * REMOVE XML DECLARATION
-     */
 
     private String removerDeclaracaoXml(String xml) {
-        if (xml == null) {
-            return "";
-        }
-
-        return xml
-                .replaceFirst("^\\s*<\\?xml[^>]*\\?>", "")
-                .replace("\uFEFF", "")
-                .trim();
-    }
-    
-    
-    private void salvarDebugXml(String nomeArquivo, String conteudo) {
-        try {
-            Path pasta = Paths.get("C:/temp/nfse-debug");
-
-            Files.createDirectories(pasta);
-
-            Path arquivo = pasta.resolve(nomeArquivo);
-
-            Files.write(
-                    arquivo,
-                    conteudo.getBytes(StandardCharsets.UTF_8)
-            );
-
-            System.out.println("Arquivo debug salvo em: " + arquivo.toAbsolutePath());
-
-        } catch (Exception e) {
-            System.out.println("Erro ao salvar XML debug: " + e.getMessage());
-            e.printStackTrace();
-        }
+        if (xml == null) return "";
+        return xml.replaceFirst("^\\s*<\\?xml[^>]*\\?>", "").replace("\uFEFF", "").trim();
     }
 }
-

@@ -50,8 +50,6 @@ public class XmlSigner {
             String senha
     ) throws Exception {
 
-        System.out.println(">>> XmlSigner Nota Control - URI com Id, 2 transforms");
-
         validarParametros(xml, tag, caminhoCertificado, senha);
 
         xml = xml

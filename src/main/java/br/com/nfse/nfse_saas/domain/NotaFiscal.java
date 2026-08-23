@@ -15,6 +15,8 @@ public class NotaFiscal {
 
     private Long numeroNfse;
 
+    private String codigoVerificacao;
+
     private Long clienteId;
 
     private String descricao;

@@ -112,7 +112,11 @@ public class NfseXmlBuilder {
         if (!texto(dto.getNotaFiscal().getCno(), "").isEmpty() || !texto(dto.getNotaFiscal().getArt(), "").isEmpty()) {
             xml.append("<ConstrucaoCivil><CodigoObra>").append(escaparXml(dto.getNotaFiscal().getCno())).append("</CodigoObra><Art>").append(escaparXml(dto.getNotaFiscal().getArt())).append("</Art></ConstrucaoCivil>");
         }
-        xml.append("<RegimeEspecialTributacao>6</RegimeEspecialTributacao><OptanteSimplesNacional>1</OptanteSimplesNacional><IncentivoFiscal>1</IncentivoFiscal>");
+        if (dto.getNotaFiscal().getRegimeEspecialTributacao() != null) {
+            xml.append("<RegimeEspecialTributacao>").append(dto.getNotaFiscal().getRegimeEspecialTributacao()).append("</RegimeEspecialTributacao>");
+        }
+        xml.append("<OptanteSimplesNacional>").append(dto.getNotaFiscal().getOptanteSimplesNacional()).append("</OptanteSimplesNacional>");
+        xml.append("<IncentivoFiscal>").append(dto.getNotaFiscal().getIncentivoFiscal()).append("</IncentivoFiscal>");
         xml.append("</InfDeclaracaoPrestacaoServico></Rps></GerarNfseEnvio>");
         return xml.toString().replace("\r", "").replace("\n", "").replace("\t", "").replace("&#13;", "");
     }
