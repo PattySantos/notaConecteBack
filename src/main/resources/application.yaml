@@ -44,3 +44,6 @@ nfse:
     endpoint-homologacao: ${NFSE_GOIANIA_ENDPOINT_HOMOLOGACAO:}
   http:
     connect-timeout-seconds: ${NFSE_HTTP_CONNECT_TIMEOUT_SECONDS:10}
+server:
+  error:
+    include-message: always
