@@ -53,7 +53,11 @@ public class NfseResponseParser {
     private String localizarXmlMunicipal(Document soap) {
         NodeList results = soap.getElementsByTagNameNS("*", "GerarNfseResult");
         if (results.getLength() == 0) results = soap.getElementsByTagNameNS("*", "outputXML");
-        if (results.getLength() == 0) throw new IllegalArgumentException("Resposta SOAP sem GerarNfseResult");
+        if (results.getLength() == 0) {
+            Element respostaDireta = firstElement(soap, "GerarNfseResposta");
+            if (respostaDireta != null) return toXml(respostaDireta);
+            throw new IllegalArgumentException("Resposta SOAP sem GerarNfseResult: " + descreverElementos(soap));
+        }
 
         Node result = results.item(0);
         String text = result.getTextContent() == null ? "" : result.getTextContent().trim();
@@ -62,6 +66,16 @@ public class NfseResponseParser {
             if (child instanceof Element element) return toXml(element);
         }
         throw new IllegalArgumentException("Resposta SOAP sem XML municipal");
+    }
+
+    private String descreverElementos(Document document) {
+        NodeList elementos = document.getElementsByTagNameNS("*", "*");
+        List<String> nomes = new ArrayList<>();
+        for (int i = 0; i < elementos.getLength() && nomes.size() < 8; i++) {
+            String nome = elementos.item(i).getLocalName();
+            if (nome != null && !nomes.contains(nome)) nomes.add(nome);
+        }
+        return nomes.isEmpty() ? "envelope sem elementos reconheciveis" : String.join(", ", nomes);
     }
 
     private NfseMunicipalResponse rejeitada(String mensagem) {

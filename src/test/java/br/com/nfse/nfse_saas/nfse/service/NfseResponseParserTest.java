@@ -34,6 +34,22 @@ class NfseResponseParserTest {
     }
 
     @Test
+    void reconheceRespostaMunicipalDiretaNoEnvelopeSoap() {
+        String soap = """
+                <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body>
+                <GerarNfseResposta xmlns="http://www.abrasf.org.br/nfse.xsd"><ListaNfse><CompNfse><Nfse><InfNfse>
+                <Numero>43</Numero><CodigoVerificacao>DEF456</CodigoVerificacao>
+                </InfNfse></Nfse></CompNfse></ListaNfse></GerarNfseResposta>
+                </soap:Body></soap:Envelope>
+                """;
+
+        NfseMunicipalResponse resposta = parser.parse(soap);
+
+        assertThat(resposta.autorizada()).isTrue();
+        assertThat(resposta.numeroNfse()).isEqualTo(43L);
+    }
+
+    @Test
     void reconheceSoapFaultComoRejeicao() {
         String soap = """
                 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body>
