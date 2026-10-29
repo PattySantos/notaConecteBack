@@ -6,6 +6,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import java.io.IOException;
 import java.util.Set;
 import br.com.nfse.nfse_saas.repository.EmpresaRepository;
@@ -29,8 +31,9 @@ public class TenantFilter extends OncePerRequestFilter {
         try {
             long tenantId = Long.parseLong(request.getHeader("X-Tenant-Id"));
             if (tenantId < 1) throw new NumberFormatException();
-            if (request.getUserPrincipal() == null || empresaRepository
-                    .findByIdAndUsuarioEmailIgnoreCase(tenantId, request.getUserPrincipal().getName())
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !authentication.isAuthenticated() || empresaRepository
+                    .findByIdAndUsuarioEmailIgnoreCase(tenantId, authentication.getName())
                     .isEmpty()) {
                 response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                 response.setContentType("application/json");
