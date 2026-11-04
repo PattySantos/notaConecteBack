@@ -18,6 +18,7 @@ import br.com.nfse.nfse_saas.nfse.dto.NfseEmissaoResponseDTO;
 import br.com.nfse.nfse_saas.nfse.dto.NotaFiscalServicoDTO;
 import br.com.nfse.nfse_saas.repository.ClienteRepository;
 import br.com.nfse.nfse_saas.repository.NotaFiscalRepository;
+import br.com.nfse.nfse_saas.nfse.soap.NfseSoapException;
 
 @Service
 public class NfseEmissaoService {
@@ -93,6 +94,11 @@ public class NfseEmissaoService {
             return new NfseEmissaoResponseDTO(nota.getId(), nota.getNumeroNfse(), nota.getStatus(), resposta.mensagem());
         } catch (ResponseStatusException e) {
             throw e;
+        } catch (NfseSoapException e) {
+            nota.setStatus("ERRO_EMISSAO");
+            nota.setRetornoEmissaoNfse(e.getRespostaSanitizada());
+            notaRepository.save(nota);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Erro ao emitir NFS-e: " + e.getMessage(), e);
         } catch (Exception e) {
             nota.setStatus("ERRO_EMISSAO");
             nota.setRetornoEmissaoNfse(e.getMessage());

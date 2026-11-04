@@ -7,6 +7,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -15,6 +17,13 @@ import org.springframework.stereotype.Component;
 public class NfseSoapClient {
 
     private static final String SOAP_ACTION = "http://nfse.abrasf.org.br/GerarNfse";
+    private static final int MAX_ERROR_RESPONSE_LENGTH = 12_000;
+    private static final Pattern MENSAGEM_ERRO = Pattern.compile(
+            "(?is)<(?:\\w+:)?(?:faultstring|mensagem|message)[^>]*>(.*?)</(?:\\w+:)?(?:faultstring|mensagem|message)>"
+    );
+    private static final Pattern TAG_SENSIVEL = Pattern.compile(
+            "(?is)<(?:\\w+:)?(?:senha|password|certificado|certificate)[^>]*>.*?</(?:\\w+:)?(?:senha|password|certificado|certificate)>"
+    );
 
     private final HttpClient httpClient;
     private final String endpointProducao;
@@ -49,7 +58,12 @@ public class NfseSoapClient {
         );
 
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            throw new IOException("SGISS respondeu HTTP " + response.statusCode());
+            String respostaSanitizada = sanitizarRespostaErro(response.body());
+            throw new NfseSoapException(
+                    response.statusCode(),
+                    extrairDetalheErro(respostaSanitizada),
+                    respostaSanitizada
+            );
         }
         if (response.body() == null || response.body().isBlank()) {
             throw new IOException("SGISS retornou uma resposta vazia");
@@ -91,5 +105,26 @@ public class NfseSoapClient {
     private String removerDeclaracaoXml(String xml) {
         if (xml == null) return "";
         return xml.replaceFirst("^\\s*<\\?xml[^>]*\\?>", "").replace("\uFEFF", "").trim();
+    }
+
+    static String sanitizarRespostaErro(String resposta) {
+        if (resposta == null || resposta.isBlank()) return "";
+        String sanitizada = TAG_SENSIVEL.matcher(resposta).replaceAll("<dado-sensivel>***</dado-sensivel>");
+        return sanitizada.length() <= MAX_ERROR_RESPONSE_LENGTH
+                ? sanitizada
+                : sanitizada.substring(0, MAX_ERROR_RESPONSE_LENGTH) + "... [resposta truncada]";
+    }
+
+    static String extrairDetalheErro(String resposta) {
+        if (resposta == null || resposta.isBlank()) return "";
+        Matcher matcher = MENSAGEM_ERRO.matcher(resposta);
+        String detalhe = matcher.find() ? matcher.group(1) : resposta;
+        detalhe = detalhe.replaceAll("(?is)<[^>]+>", " ")
+                .replace("&lt;", "<")
+                .replace("&gt;", ">")
+                .replace("&amp;", "&")
+                .replaceAll("\\s+", " ")
+                .trim();
+        return detalhe.length() <= 1_000 ? detalhe : detalhe.substring(0, 1_000) + "...";
     }
 }
