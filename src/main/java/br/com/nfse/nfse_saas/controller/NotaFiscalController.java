@@ -37,6 +37,7 @@ public class NotaFiscalController {
     public NotaFiscal salvar(@RequestBody NotaFiscal nota) {
         Empresa empresa = empresaRepository.findByIdForUpdate(TenantContext.getTenantId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Empresa nao encontrada"));
+        nota.setId(null);
         nota.setEmpresa(empresa);
         preencherNumeroRps(nota, empresa);
         nota.setNumeroNfse(null);
@@ -55,6 +56,58 @@ public class NotaFiscalController {
     @GetMapping
     public List<NotaFiscal> listar() {
         return repository.findByEmpresaId(TenantContext.getTenantId());
+    }
+
+    @GetMapping("/{id}")
+    public NotaFiscal buscar(@PathVariable Long id) {
+        return buscarDoTenant(id);
+    }
+
+    @PutMapping("/{id}")
+    public NotaFiscal atualizar(@PathVariable Long id, @RequestBody NotaFiscal dados) {
+        NotaFiscal nota = buscarDoTenant(id);
+        if ("EMITIDA".equals(nota.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "NFS-e emitida nao pode ser editada.");
+        }
+
+        nota.setClienteId(dados.getClienteId());
+        nota.setDescricao(dados.getDescricao());
+        nota.setValor(dados.getValor());
+        nota.setIss(dados.getIss());
+        nota.setCodigoServico(dados.getCodigoServico());
+        nota.setCodigoServicoNacional(dados.getCodigoServicoNacional());
+        nota.setCodigoNbs(dados.getCodigoNbs());
+        nota.setIndicadorIbscbs(dados.getIndicadorIbscbs());
+        nota.setMunicipio(dados.getMunicipio());
+        nota.setProdutoId(dados.getProdutoId());
+        nota.setDataCompetencia(dados.getDataCompetencia());
+        nota.setNumeroRps(dados.getNumeroRps());
+        nota.setSerieRps(dados.getSerieRps());
+        nota.setTipoRps(dados.getTipoRps());
+        nota.setLocalPrestacao(dados.getLocalPrestacao());
+        nota.setPaisPrestacao(dados.getPaisPrestacao());
+        nota.setCodigoCnae(dados.getCodigoCnae());
+        nota.setExigibilidadeIss(dados.getExigibilidadeIss());
+        nota.setIssRetido(dados.getIssRetido());
+        nota.setValorDeducoes(dados.getValorDeducoes());
+        nota.setDescontoIncondicionado(dados.getDescontoIncondicionado());
+        nota.setDescontoCondicionado(dados.getDescontoCondicionado());
+        nota.setValorPis(dados.getValorPis());
+        nota.setValorCofins(dados.getValorCofins());
+        nota.setValorInss(dados.getValorInss());
+        nota.setValorIr(dados.getValorIr());
+        nota.setValorCsll(dados.getValorCsll());
+        nota.setOutrasRetencoes(dados.getOutrasRetencoes());
+        nota.setProcessoSuspensao(dados.getProcessoSuspensao());
+        nota.setCno(dados.getCno());
+        nota.setArt(dados.getArt());
+        nota.setInformacoesComplementares(dados.getInformacoesComplementares());
+        return repository.save(nota);
+    }
+
+    private NotaFiscal buscarDoTenant(Long id) {
+        return repository.findByIdAndEmpresaId(id, TenantContext.getTenantId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Nota fiscal nao encontrada."));
     }
 
     private void preencherNumeroRps(NotaFiscal nota, Empresa empresa) {
