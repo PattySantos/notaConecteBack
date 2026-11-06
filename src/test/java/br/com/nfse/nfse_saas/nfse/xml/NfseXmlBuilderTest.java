@@ -24,6 +24,18 @@ class NfseXmlBuilderTest {
         assertThat(new NfseXmlBuilder().gerarXml(dtoMinimo())).doesNotContain("<RegimeEspecialTributacao>");
     }
 
+    @Test
+    void normalizaItemDaListaESuprimeEnderecoIncompletoDoTomador() {
+        NotaFiscalServicoDTO dto = dtoMinimo();
+        dto.getNotaFiscal().setCodigoItemListaServico("1401");
+        dto.getTomador().setCepTomador(null);
+
+        String xml = new NfseXmlBuilder().gerarXml(dto);
+
+        assertThat(xml).contains("<ItemListaServico>14.01</ItemListaServico>");
+        assertThat(xml).doesNotContain("<TomadorServico><IdentificacaoTomador><CpfCnpj><Cnpj>98765432000110</Cnpj></CpfCnpj></IdentificacaoTomador><RazaoSocial>Tomador Teste</RazaoSocial><Endereco>");
+    }
+
     private NotaFiscalServicoDTO dtoMinimo() {
         NotaFiscalServicoDTO dto = new NotaFiscalServicoDTO();
         dto.getNotaFiscal().setNumeroRps("1");

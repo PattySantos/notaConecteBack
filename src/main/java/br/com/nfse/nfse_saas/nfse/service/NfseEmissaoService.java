@@ -125,7 +125,7 @@ public class NfseEmissaoService {
         dto.getNotaFiscal().setValorServicos(nota.getValor() != null ? nota.getValor() : BigDecimal.ZERO);
         dto.getNotaFiscal().setAliquotaIss(nota.getIss() != null ? nota.getIss() : BigDecimal.ZERO);
         dto.getNotaFiscal().setIssRetido(Boolean.TRUE.equals(nota.getIssRetido()) ? "1" : "2");
-        dto.getNotaFiscal().setCodigoItemListaServico(primeiroTexto(nota.getCodigoServico(), nota.getCodigoServicoNacional()));
+        dto.getNotaFiscal().setCodigoItemListaServico(primeiroTexto(nota.getCodigoServicoNacional(), nota.getCodigoServico()));
         dto.getNotaFiscal().setCodigoTributacaoMunicipio(nota.getCodigoServico());
         dto.getNotaFiscal().setCodigoCnae(nota.getCodigoCnae());
         dto.getNotaFiscal().setCodigoNbs(nota.getCodigoNbs());

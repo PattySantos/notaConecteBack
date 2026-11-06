@@ -7,11 +7,11 @@ import org.junit.jupiter.api.Test;
 class NfseCabecalhoBuilderTest {
 
     @Test
-    void geraCabecalhoNoLayoutAbrasf204() {
+    void geraCabecalhoDeTransporteAbrasf204() {
         String cabecalho = new NfseCabecalhoBuilder().gerarCabecalho();
 
         assertThat(cabecalho)
-                .contains("versao=\"2.04\"")
+                .contains("versao=\"1.00\"")
                 .contains("<versaoDados>2.04</versaoDados>");
     }
 }

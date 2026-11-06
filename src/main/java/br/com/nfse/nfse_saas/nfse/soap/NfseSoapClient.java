@@ -83,23 +83,15 @@ public class NfseSoapClient {
         return endpointHomologacao;
     }
 
-    private String montarSoap(String cabecalho, String xml) {
+    String montarSoap(String cabecalho, String xml) {
         return "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
                 + "<soap:Envelope xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" "
                 + "xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" "
                 + "xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">"
                 + "<soap:Body><GerarNfse xmlns=\"http://nfse.abrasf.org.br\">"
-                + "<nfseCabecMsg>" + escaparConteudoSoap(cabecalho) + "</nfseCabecMsg>"
-                + "<nfseDadosMsg>" + escaparConteudoSoap(xml) + "</nfseDadosMsg>"
+                + "<nfseCabecMsg>" + cabecalho + "</nfseCabecMsg>"
+                + "<nfseDadosMsg>" + xml + "</nfseDadosMsg>"
                 + "</GerarNfse></soap:Body></soap:Envelope>";
-    }
-
-    private String escaparConteudoSoap(String xml) {
-        return xml.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'", "&apos;");
     }
 
     private String removerDeclaracaoXml(String xml) {

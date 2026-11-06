@@ -64,7 +64,7 @@ public class NfseXmlBuilder {
         if ("1".equals(issRetido)) {
             xml.append("<ResponsavelRetencao>1</ResponsavelRetencao>");
         }
-        xml.append("<ItemListaServico>").append(escaparXml(dto.getNotaFiscal().getCodigoItemListaServico())).append("</ItemListaServico>");
+        xml.append("<ItemListaServico>").append(escaparXml(formatarItemListaServico(dto.getNotaFiscal().getCodigoItemListaServico()))).append("</ItemListaServico>");
         xml.append("<CodigoCnae>").append(somenteNumeros(dto.getNotaFiscal().getCodigoCnae())).append("</CodigoCnae>");
         xml.append("<CodigoTributacaoMunicipio>").append(somenteNumeros(dto.getNotaFiscal().getCodigoTributacaoMunicipio())).append("</CodigoTributacaoMunicipio>");
         if (!texto(dto.getNotaFiscal().getCodigoNbs(), "").isEmpty()) {
@@ -75,7 +75,7 @@ public class NfseXmlBuilder {
         int exigibilidadeIss = dto.getNotaFiscal().getExigibilidadeIss() != null ? dto.getNotaFiscal().getExigibilidadeIss() : 1;
         xml.append("<CodigoMunicipio>").append(codigoMunicipio).append("</CodigoMunicipio><ExigibilidadeISS>").append(exigibilidadeIss).append("</ExigibilidadeISS>");
         if ((exigibilidadeIss == 6 || exigibilidadeIss == 7) && !texto(dto.getNotaFiscal().getProcessoSuspensao(), "").isEmpty()) {
-            xml.append("<ProcessoSuspensao>").append(escaparXml(dto.getNotaFiscal().getProcessoSuspensao())).append("</ProcessoSuspensao>");
+            xml.append("<NumeroProcesso>").append(escaparXml(dto.getNotaFiscal().getProcessoSuspensao())).append("</NumeroProcesso>");
         }
         xml.append("<MunicipioIncidencia>").append(codigoMunicipio).append("</MunicipioIncidencia>");
         xml.append("</Servico>");
@@ -94,12 +94,14 @@ public class NfseXmlBuilder {
         }
         xml.append("</IdentificacaoTomador>");
         xml.append("<RazaoSocial>").append(escaparXml(dto.getTomador().getRazaoSocialTomador())).append("</RazaoSocial>");
-        xml.append("<Endereco><Endereco>").append(escaparXml(dto.getTomador().getEnderecoTomador())).append("</Endereco>");
-        xml.append("<Numero>").append(escaparXml(dto.getTomador().getNumero())).append("</Numero>");
-        xml.append("<Bairro>").append(escaparXml(removerAcentos(dto.getTomador().getBairroTomador()))).append("</Bairro>");
-        xml.append("<CodigoMunicipio>").append(somenteNumeros(codigoMunicipioTomador)).append("</CodigoMunicipio>");
-        xml.append("<Uf>").append(escaparXml(dto.getTomador().getUfTomador())).append("</Uf>");
-        xml.append("<Cep>").append(cep).append("</Cep></Endereco>");
+        if (temEnderecoTomadorCompleto(dto, cep, codigoMunicipioTomador)) {
+            xml.append("<Endereco><Endereco>").append(escaparXml(dto.getTomador().getEnderecoTomador())).append("</Endereco>");
+            xml.append("<Numero>").append(escaparXml(dto.getTomador().getNumero())).append("</Numero>");
+            xml.append("<Bairro>").append(escaparXml(removerAcentos(dto.getTomador().getBairroTomador()))).append("</Bairro>");
+            xml.append("<CodigoMunicipio>").append(somenteNumeros(codigoMunicipioTomador)).append("</CodigoMunicipio>");
+            xml.append("<Uf>").append(escaparXml(dto.getTomador().getUfTomador())).append("</Uf>");
+            xml.append("<Cep>").append(cep).append("</Cep></Endereco>");
+        }
         String telefoneTomador = somenteNumeros(dto.getTomador().getTelefoneTomador());
         String emailTomador = texto(dto.getTomador().getEmailTomador(), "");
         if (!telefoneTomador.isEmpty() || !emailTomador.isEmpty()) {
@@ -142,5 +144,21 @@ public class NfseXmlBuilder {
 
     private String texto(String valor, String padrao) {
         return valor == null || valor.trim().isEmpty() ? padrao : valor.trim();
+    }
+
+    private boolean temEnderecoTomadorCompleto(NotaFiscalServicoDTO dto, String cep, String codigoMunicipio) {
+        return !texto(dto.getTomador().getEnderecoTomador(), "").isEmpty()
+                && !texto(dto.getTomador().getNumero(), "").isEmpty()
+                && !texto(dto.getTomador().getBairroTomador(), "").isEmpty()
+                && somenteNumeros(codigoMunicipio).length() == 7
+                && texto(dto.getTomador().getUfTomador(), "").length() == 2
+                && cep.length() == 8;
+    }
+
+    private String formatarItemListaServico(String valor) {
+        String numeros = somenteNumeros(valor);
+        if (numeros.length() <= 2) return numeros;
+        int posicaoPonto = numeros.length() - 2;
+        return numeros.substring(0, posicaoPonto) + "." + numeros.substring(posicaoPonto);
     }
 }
