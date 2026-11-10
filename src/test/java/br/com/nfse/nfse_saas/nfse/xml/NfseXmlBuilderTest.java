@@ -36,6 +36,21 @@ class NfseXmlBuilderTest {
         assertThat(xml).doesNotContain("<TomadorServico><IdentificacaoTomador><CpfCnpj><Cnpj>98765432000110</Cnpj></CpfCnpj></IdentificacaoTomador><RazaoSocial>Tomador Teste</RazaoSocial><Endereco>");
     }
 
+    @Test
+    void respeitaAOrdemDoSchemaParaMunicipioEProcessoDeSuspensao() {
+        NotaFiscalServicoDTO dto = dtoMinimo();
+        dto.getNotaFiscal().setExigibilidadeIss(6);
+        dto.getNotaFiscal().setProcessoSuspensao("PROC-123");
+
+        String xml = new NfseXmlBuilder().gerarXml(dto);
+
+        assertThat(xml).containsSubsequence(
+                "<ExigibilidadeISS>6</ExigibilidadeISS>",
+                "<MunicipioIncidencia>5208707</MunicipioIncidencia>",
+                "<NumeroProcesso>PROC-123</NumeroProcesso>"
+        );
+    }
+
     private NotaFiscalServicoDTO dtoMinimo() {
         NotaFiscalServicoDTO dto = new NotaFiscalServicoDTO();
         dto.getNotaFiscal().setNumeroRps("1");

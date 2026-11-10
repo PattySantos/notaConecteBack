@@ -74,10 +74,10 @@ public class NfseXmlBuilder {
         String codigoMunicipio = somenteNumeros(texto(dto.getNotaFiscal().getCodigoMunicipio(), "5208707"));
         int exigibilidadeIss = dto.getNotaFiscal().getExigibilidadeIss() != null ? dto.getNotaFiscal().getExigibilidadeIss() : 1;
         xml.append("<CodigoMunicipio>").append(codigoMunicipio).append("</CodigoMunicipio><ExigibilidadeISS>").append(exigibilidadeIss).append("</ExigibilidadeISS>");
+        xml.append("<MunicipioIncidencia>").append(codigoMunicipio).append("</MunicipioIncidencia>");
         if ((exigibilidadeIss == 6 || exigibilidadeIss == 7) && !texto(dto.getNotaFiscal().getProcessoSuspensao(), "").isEmpty()) {
             xml.append("<NumeroProcesso>").append(escaparXml(dto.getNotaFiscal().getProcessoSuspensao())).append("</NumeroProcesso>");
         }
-        xml.append("<MunicipioIncidencia>").append(codigoMunicipio).append("</MunicipioIncidencia>");
         xml.append("</Servico>");
         xml.append("<Prestador><CpfCnpj><Cnpj>").append(cnpjPrestador).append("</Cnpj></CpfCnpj>");
         xml.append("<InscricaoMunicipal>").append(inscricaoMunicipal).append("</InscricaoMunicipal></Prestador>");
