@@ -123,4 +123,19 @@ class NotaFiscalControllerTest {
         assertThat(criada.getStatus()).isEqualTo("RASCUNHO");
         assertThat(criada.getNumeroRps()).isEqualTo("1");
     }
+
+    @Test
+    void geraXmlDeDiagnosticoSomenteParaNotaDoTenant() {
+        TenantContext.setTenantId(7L);
+        NotaFiscal nota = new NotaFiscal();
+        NfseEmissaoService emissaoService = mock(NfseEmissaoService.class);
+        NotaFiscalController controllerComDiagnostico = new NotaFiscalController(repository, empresaRepository, emissaoService);
+        when(repository.findByIdAndEmpresaId(3L, 7L)).thenReturn(Optional.of(nota));
+        when(emissaoService.gerarXmlParaDiagnostico(3L)).thenReturn("<GerarNfseEnvio/>");
+
+        String xml = controllerComDiagnostico.gerarXmlNfseDiagnostico(3L);
+
+        assertThat(xml).isEqualTo("<GerarNfseEnvio/>");
+        verify(emissaoService).gerarXmlParaDiagnostico(3L);
+    }
 }

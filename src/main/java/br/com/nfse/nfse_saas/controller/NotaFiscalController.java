@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 
 import java.util.List;
 
@@ -51,6 +52,13 @@ public class NotaFiscalController {
         repository.findByIdAndEmpresaId(id, TenantContext.getTenantId())
                 .orElseThrow(() -> new RuntimeException("Nota fiscal nao encontrada para o tenant"));
         return nfseEmissaoService.emitir(id);
+    }
+
+    @GetMapping(value = "/{id}/xml-nfse-diagnostico", produces = MediaType.APPLICATION_XML_VALUE)
+    public String gerarXmlNfseDiagnostico(@PathVariable Long id) {
+        repository.findByIdAndEmpresaId(id, TenantContext.getTenantId())
+                .orElseThrow(() -> new RuntimeException("Nota fiscal nao encontrada para o tenant"));
+        return nfseEmissaoService.gerarXmlParaDiagnostico(id);
     }
 
     @GetMapping

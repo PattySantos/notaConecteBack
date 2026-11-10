@@ -114,6 +114,21 @@ public class NfseEmissaoService {
         }
     }
 
+    @Transactional(readOnly = true)
+    public String gerarXmlParaDiagnostico(Long notaId) {
+        NotaFiscal nota = notaRepository.findById(notaId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "NFS-e nao localizada."));
+        Empresa empresa = nota.getEmpresa();
+        if (empresa == null || nota.getClienteId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A NFS-e nao possui prestador ou tomador vinculados.");
+        }
+        Cliente cliente = clienteRepository.findById(nota.getClienteId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tomador da NFS-e nao localizado."));
+
+        validarDadosFiscais(nota, empresa, cliente);
+        return nfseService.gerarXml(montarDto(nota, empresa, cliente));
+    }
+
     private NotaFiscalServicoDTO montarDto(NotaFiscal nota, Empresa empresa, Cliente cliente) {
         NotaFiscalServicoDTO dto = new NotaFiscalServicoDTO();
         Endereco enderecoTomador = cliente.getEndereco();
